@@ -1,0 +1,6 @@
+apiVersion: v2
+name: cli-release-server
+description: Generic CLI release metadata and asset proxy.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

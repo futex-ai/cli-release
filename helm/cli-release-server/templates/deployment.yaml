@@ -1,0 +1,112 @@
+{{- include "cli-release-server.validateGithubSecret" . -}}
+{{- include "cli-release-server.validateServerBind" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "cli-release-server.fullname" . }}
+  labels:
+    {{- include "cli-release-server.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "cli-release-server.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "cli-release-server.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "cli-release-server.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: cli-release-server
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - serve
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: CLI_RELEASE_LOG_LEVEL
+              value: {{ .Values.logging.level | quote }}
+            - name: CLI_RELEASE_LOG_FORMAT
+              value: {{ .Values.logging.format | quote }}
+            - name: CLI_RELEASE_SERVER_BIND
+              value: {{ include "cli-release-server.serverBind" . | quote }}
+            {{- if .Values.config.releaseGithubRepository }}
+            - name: CLI_RELEASE_GITHUB_REPOSITORY
+              value: {{ .Values.config.releaseGithubRepository | quote }}
+            {{- end }}
+            - name: CLI_RELEASE_GITHUB_API_URL
+              value: {{ .Values.config.releaseGithubApiUrl | quote }}
+            - name: CLI_RELEASE_PUBLIC_RELEASE_SERVER_URL
+              value: {{ .Values.config.publicReleaseServerUrl | quote }}
+            - name: CLI_RELEASE_INSTALL_HOSTS
+              value: {{ join "," .Values.config.installHosts | quote }}
+            - name: CLI_RELEASE_DEFAULT_BINARY
+              value: {{ .Values.config.defaultBinary | quote }}
+            - name: CLI_RELEASE_BINARIES
+              value: {{ join "," .Values.config.binaries | quote }}
+            - name: CLI_RELEASE_TAG_PREFIX
+              value: {{ .Values.config.tagPrefix | quote }}
+            - name: CLI_RELEASE_ASSET_TEMPLATE
+              value: {{ .Values.config.assetTemplate | quote }}
+            - name: CLI_RELEASE_CLIENT_SERVER_URL_ENV
+              value: {{ .Values.config.clientServerUrlEnv | quote }}
+            - name: CLI_RELEASE_INSTALL_DIR_ENV
+              value: {{ .Values.config.installDirEnv | quote }}
+            {{- if .Values.config.releaseGithubRepository }}
+            - name: CLI_RELEASE_GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "cli-release-server.secretName" . }}
+                  key: CLI_RELEASE_GITHUB_TOKEN
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: {{ .Values.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: {{ .Values.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.failureThreshold }}
+          {{- with .Values.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
