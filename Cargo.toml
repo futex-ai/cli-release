@@ -1,0 +1,17 @@
+[workspace]
+members = [
+    "crates/cli-release-interface",
+    "crates/cli-release-server",
+    "crates/cli-updater",
+    "xtask",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+license = "MIT"
+authors = ["CLI Release contributors"]
+
+[workspace.dependencies]
+cli-release-interface = { version = "0.1.0", path = "crates/cli-release-interface" }

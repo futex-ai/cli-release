@@ -1,0 +1,44 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "cli-release-server.fullname" . }}
+  labels:
+    {{- include "cli-release-server.labels" . | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className | quote }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host | quote }}
+      secretName: {{ .Values.ingress.tlsSecretName | quote }}
+    {{- if .Values.ingress.installHost }}
+    - hosts:
+        - {{ .Values.ingress.installHost | quote }}
+      secretName: {{ .Values.ingress.installTlsSecretName | quote }}
+    {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host | quote }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.path | quote }}
+            pathType: {{ .Values.ingress.pathType }}
+            backend:
+              service:
+                name: {{ include "cli-release-server.fullname" . }}
+                port:
+                  name: http
+    {{- if .Values.ingress.installHost }}
+    - host: {{ .Values.ingress.installHost | quote }}
+      http:
+        paths:
+          - path: {{ .Values.ingress.path | quote }}
+            pathType: {{ .Values.ingress.pathType }}
+            backend:
+              service:
+                name: {{ include "cli-release-server.fullname" . }}
+                port:
+                  name: http
+    {{- end }}
+{{- end }}

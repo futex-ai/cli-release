@@ -1,0 +1,112 @@
+name: Shared Crate Release
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shared-crate-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  RELEASE_PLZ_TOOLCHAIN: stable
+
+jobs:
+  checks:
+    name: Checks
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install "${RELEASE_PLZ_TOOLCHAIN}"
+          rustup default "${RELEASE_PLZ_TOOLCHAIN}"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Run workspace checks
+        run: cargo xtask check
+
+      - name: Run release script tests
+        run: scripts/test-cli-release.sh
+
+      - name: Run Helm chart tests
+        run: python3 helm/cli-release-server/tests/assert_cli_release_chart.py
+
+      - name: Build release-server image
+        run: docker build --target cli-release-server-runtime -t cli-release-server:ci .
+
+      - name: Smoke-test release-server image
+        run: docker run --rm cli-release-server:ci --help
+
+  release:
+    name: Release Shared Crates
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    needs: checks
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install "${RELEASE_PLZ_TOOLCHAIN}"
+          rustup default "${RELEASE_PLZ_TOOLCHAIN}"
+
+      - name: Validate package manifests
+        run: scripts/cli-release.sh verify-package-manifests Cargo.toml
+
+      - name: Run release-plz release
+        uses: release-plz/action@v0.5
+        with:
+          command: release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release-pr:
+    name: Release PR
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    needs: release
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install "${RELEASE_PLZ_TOOLCHAIN}"
+          rustup default "${RELEASE_PLZ_TOOLCHAIN}"
+
+      - name: Validate package manifests
+        run: scripts/cli-release.sh verify-package-manifests Cargo.toml
+
+      - name: Run release-plz release-pr
+        uses: release-plz/action@v0.5
+        with:
+          command: release-pr
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

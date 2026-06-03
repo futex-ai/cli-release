@@ -1,0 +1,90 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/example/cli-release-server
+  tag: latest
+  pullPolicy: IfNotPresent
+
+config:
+  releaseGithubRepository: ""
+  releaseGithubApiUrl: https://api.github.com
+  publicReleaseServerUrl: https://releases.example.com
+  installHosts:
+    - install.example.com
+  defaultBinary: example-cli
+  binaries:
+    - example-cli
+  tagPrefix: v
+  assetTemplate: "{binary}-{version}-{target}.tar.gz"
+  clientServerUrlEnv: CLI_RELEASE_SERVER_URL
+  installDirEnv: CLI_RELEASE_INSTALL_DIR
+
+logging:
+  level: info
+  format: json
+
+secret:
+  create: true
+  name: ""
+  existingSecret: ""
+  externalSecret:
+    enabled: false
+    refreshInterval: 5m
+    secretStore:
+      name: cli-release-secret-store
+      kind: ClusterSecretStore
+    remoteKeys:
+      CLI_RELEASE_GITHUB_TOKEN: cli-release-github-token
+  values:
+    releaseGithubToken: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  className: nginx
+  host: releases.example.com
+  tlsSecretName: cli-release-server-tls
+  installHost: install.example.com
+  installTlsSecretName: cli-release-install-tls
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  path: /
+  pathType: Prefix
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
+
+probes:
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 6
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
