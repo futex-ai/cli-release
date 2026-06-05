@@ -81,6 +81,88 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  release-server-image:
+    name: Publish Release Server Image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    needs: checks
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Resolve image repository
+        id: image
+        env:
+          CONFIGURED_IMAGE_REPOSITORY: ${{ vars.CLI_RELEASE_SERVER_IMAGE_REPOSITORY }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          image_repository="${CONFIGURED_IMAGE_REPOSITORY:-ghcr.io/${REPOSITORY_OWNER}/cli-release-server}"
+          image_repository="$(printf '%s' "${image_repository}" | tr '[:upper:]' '[:lower:]')"
+          registry="${image_repository%%/*}"
+          short_sha="$(printf '%s' "${GITHUB_SHA}" | cut -c1-12)"
+          if [ "${registry}" = "${image_repository}" ]; then
+            echo "::error::CLI_RELEASE_SERVER_IMAGE_REPOSITORY must include a registry host, for example ghcr.io/${REPOSITORY_OWNER}/cli-release-server"
+            exit 1
+          fi
+          {
+            echo "repository=${image_repository}"
+            echo "registry=${registry}"
+            echo "short_sha=${short_sha}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Log in to GitHub Container Registry
+        if: startsWith(steps.image.outputs.repository, 'ghcr.io/')
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ steps.image.outputs.registry }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to configured container registry
+        if: ${{ !startsWith(steps.image.outputs.repository, 'ghcr.io/') }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ steps.image.outputs.registry }}
+          username: ${{ secrets.CLI_RELEASE_SERVER_REGISTRY_USERNAME }}
+          password: ${{ secrets.CLI_RELEASE_SERVER_REGISTRY_PASSWORD }}
+
+      - name: Build release-server image
+        env:
+          IMAGE_REPOSITORY: ${{ steps.image.outputs.repository }}
+          SHORT_SHA: ${{ steps.image.outputs.short_sha }}
+        run: |
+          set -euo pipefail
+          docker build \
+            --target cli-release-server-runtime \
+            --build-arg "CLI_RELEASE_BUILD_COMMIT=${GITHUB_SHA}" \
+            -t "${IMAGE_REPOSITORY}:latest" \
+            -t "${IMAGE_REPOSITORY}:main" \
+            -t "${IMAGE_REPOSITORY}:sha-${SHORT_SHA}" \
+            .
+
+      - name: Smoke-test release-server image
+        env:
+          IMAGE_REPOSITORY: ${{ steps.image.outputs.repository }}
+          SHORT_SHA: ${{ steps.image.outputs.short_sha }}
+        run: docker run --rm "${IMAGE_REPOSITORY}:sha-${SHORT_SHA}" --help
+
+      - name: Push release-server image
+        env:
+          IMAGE_REPOSITORY: ${{ steps.image.outputs.repository }}
+          SHORT_SHA: ${{ steps.image.outputs.short_sha }}
+        run: |
+          set -euo pipefail
+          docker push "${IMAGE_REPOSITORY}:latest"
+          docker push "${IMAGE_REPOSITORY}:main"
+          docker push "${IMAGE_REPOSITORY}:sha-${SHORT_SHA}"
+
   release-pr:
     name: Release PR
     if: github.event_name != 'pull_request'

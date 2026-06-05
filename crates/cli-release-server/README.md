@@ -103,6 +103,8 @@ newer latest release does not invalidate metadata that was already returned.
 
 Container images set `CLI_RELEASE_BUILD_COMMIT` in the runtime stage so
 `GET /` reports the deployed revision.
+On pushes to `main`, the shared release workflow publishes the runtime image
+as `latest`, `main`, and `sha-<12-character-git-sha>`.
 
 ## Development
 

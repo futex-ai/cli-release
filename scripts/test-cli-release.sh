@@ -190,6 +190,14 @@ grep -F 'run: cargo xtask check' "$release_workflow" >/dev/null
 grep -F 'run: scripts/test-cli-release.sh' "$release_workflow" >/dev/null
 grep -F 'run: python3 helm/cli-release-server/tests/assert_cli_release_chart.py' "$release_workflow" >/dev/null
 grep -F 'run: docker build --target cli-release-server-runtime -t cli-release-server:ci .' "$release_workflow" >/dev/null
+grep -F 'name: Publish Release Server Image' "$release_workflow" >/dev/null
+grep -F "if: github.event_name == 'push' && github.ref == 'refs/heads/main'" "$release_workflow" >/dev/null
+grep -F 'packages: write' "$release_workflow" >/dev/null
+grep -F 'CLI_RELEASE_SERVER_IMAGE_REPOSITORY' "$release_workflow" >/dev/null
+grep -F 'docker/login-action@v3' "$release_workflow" >/dev/null
+grep -F -- '--build-arg "CLI_RELEASE_BUILD_COMMIT=${GITHUB_SHA}"' "$release_workflow" >/dev/null
+grep -F 'docker run --rm "${IMAGE_REPOSITORY}:sha-${SHORT_SHA}" --help' "$release_workflow" >/dev/null
+grep -F 'docker push "${IMAGE_REPOSITORY}:latest"' "$release_workflow" >/dev/null
 grep -F 'needs: checks' "$release_workflow" >/dev/null
 grep -F 'release-plz/action@v0.5' "$release_workflow" >/dev/null
 assert_fails grep -F 'gh release upload' "$release_workflow"

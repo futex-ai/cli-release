@@ -10,8 +10,8 @@ configurable release server for private GitHub Release assets.
 - Trait-backed updater library for status checks and explicit self-upgrades.
 - Generic HTTP release server for install scripts, latest metadata, and
   proxied archive downloads.
-- Release packaging script, Docker image target, Helm chart, and release-plz
-  configuration for this workspace's shared crates.
+- Release packaging script, Docker image target, main-branch image publishing,
+  Helm chart, and release-plz configuration for this workspace's shared crates.
 
 ## Interface
 
