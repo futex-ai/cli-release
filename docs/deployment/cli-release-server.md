@@ -46,6 +46,34 @@ Bake uses the same runtime target:
 docker buildx bake cli-release-server
 ```
 
+## CI Image Publishing
+
+The shared release workflow publishes the runtime image after checks pass on
+pushes to `main`.
+
+By default, it pushes to:
+
+```text
+ghcr.io/<github-owner>/cli-release-server
+```
+
+Override the target by setting the repository variable
+`CLI_RELEASE_SERVER_IMAGE_REPOSITORY` to a full image repository without a tag,
+for example `docker.io/acme/cli-release-server` or
+`us-docker.pkg.dev/acme/releases/cli-release-server`.
+
+The workflow publishes these tags:
+
+```text
+latest
+main
+sha-<12-character-git-sha>
+```
+
+GHCR uses the workflow `GITHUB_TOKEN`. Other registries require repository
+secrets named `CLI_RELEASE_SERVER_REGISTRY_USERNAME` and
+`CLI_RELEASE_SERVER_REGISTRY_PASSWORD`.
+
 ## Helm
 
 Render the reusable chart:

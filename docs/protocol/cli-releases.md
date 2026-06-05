@@ -179,6 +179,8 @@ tests, documentation, optional reusable workflow templates, the generic
 release-server image, and deployment chart examples. It also runs release-plz
 for versioning and releasing this workspace's shared crates, including
 `cli-release-interface`, `cli-updater`, and `cli-release-server`.
+On pushes to `main`, the shared release workflow publishes the generic
+`cli-release-server` runtime image after workspace checks pass.
 
 The in-repo release-plz workflow must only release shared workspace artifacts.
 It must not copy an app repository's `.github/workflows/release.yml` as an
