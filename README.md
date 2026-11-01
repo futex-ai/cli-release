@@ -51,11 +51,9 @@ cargo xtask review
 - `crates/cli-release-server` - HTTP install and release metadata service.
 - `scripts/cli-release.sh` - generic tag validation and archive packaging.
 - `helm/cli-release-server` - reusable release-server chart.
-- `plans/` - active and completed implementation plans.
 - `docs/protocol/` - release protocol and deployment contracts.
 
 ## Links
 
-- [Plans](./plans/README.md)
 - [Documentation](./docs/README.md)
 - [CLI release protocol](./docs/protocol/cli-releases.md)

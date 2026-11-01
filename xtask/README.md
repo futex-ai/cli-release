@@ -32,7 +32,3 @@ cargo clippy -p xtask --all-targets --all-features -- -D warnings
 ### Key Code
 
 - `src/main.rs` - command dispatch and subprocess execution.
-
-### Related Docs
-
-- [`../plans/README.md`](../plans/README.md)
