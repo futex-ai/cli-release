@@ -37,12 +37,14 @@ scripts/test-cli-release.sh
 cargo run -p cli-release-server -- serve --bind 127.0.0.1:8080
 ```
 
-Run the full local check suite before completion:
+`cargo xtask check` is the complete gate. Run it before completion:
 
 ```bash
 cargo xtask check
-cargo xtask review
 ```
+
+`cargo xtask review` is an optional manual review. It sends a summary of
+the local diff to a read-only Codex reviewer.
 
 ## Key Code
 
