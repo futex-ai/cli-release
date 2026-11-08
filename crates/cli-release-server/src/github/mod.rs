@@ -13,6 +13,7 @@ use assets::{AssetTemplate, sha256_from_asset_digest};
 use client::download_asset;
 use releases::{GitHubAsset, GitHubRelease};
 
+use crate::channel::ReleaseChannel;
 use crate::config::GitHubConfig;
 use crate::{Error, ReleaseDownload, ReleaseProvider, Result};
 
@@ -28,6 +29,7 @@ pub struct GitHubReleaseProvider {
     api_url: String,
     token: String,
     tag_prefix: String,
+    channel: ReleaseChannel,
     asset_template: AssetTemplate,
     client: reqwest::Client,
 }
@@ -55,6 +57,7 @@ impl GitHubReleaseProvider {
             api_url: config.api_url,
             token: config.token,
             tag_prefix: config.tag_prefix,
+            channel: config.channel,
             asset_template,
             client,
         })

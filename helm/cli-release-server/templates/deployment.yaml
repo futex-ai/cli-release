@@ -63,6 +63,8 @@ spec:
               value: {{ .Values.config.tagPrefix | quote }}
             - name: CLI_RELEASE_ASSET_TEMPLATE
               value: {{ .Values.config.assetTemplate | quote }}
+            - name: CLI_RELEASE_CHANNEL
+              value: {{ .Values.config.releaseChannel | quote }}
             - name: CLI_RELEASE_CLIENT_SERVER_URL_ENV
               value: {{ .Values.config.clientServerUrlEnv | quote }}
             - name: CLI_RELEASE_INSTALL_DIR_ENV

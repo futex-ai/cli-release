@@ -37,18 +37,20 @@ Contract owners:
 
 Depends on: none
 
-- [ ] Describe the channel, release order, empty result, and exact downloads in the protocol.
-- [ ] Update the root README, server README, and deployment configuration docs.
+- [x] Describe the channel, release order, empty result, and exact downloads in the protocol.
+- [x] Update the root README, server README, and deployment configuration docs.
+
+Evidence: `.context/prerelease-channel/reports/docs.md`.
 
 ## Milestone 2: Channel selection and regression tests
 
 Depends on: 1
 
-- [ ] Add the channel configuration and GitHub selection with pagination.
-- [ ] Expose the setting in Helm without adding a validation gate.
-- [ ] Add focused tests for both channels, drafts, prefixes, empty results, pagination, and exact downloads.
-- [ ] Prove each new test fails with the old behavior and record its runtime.
-- [ ] Run every new asynchronous test ten times.
+- [x] Add the channel configuration and GitHub selection with pagination.
+- [x] Expose the setting in Helm without adding a validation gate.
+- [x] Add focused tests for both channels, drafts, prefixes, empty results, pagination, and exact downloads.
+- [x] Prove each new test fails with the old behavior and record its runtime.
+- [x] Run every new asynchronous test ten times.
 
 Evidence lives under `.context/prerelease-channel/`.
 
@@ -56,8 +58,13 @@ Evidence lives under `.context/prerelease-channel/`.
 
 Depends on: 1, 2
 
-- [ ] Run the early checks and a server smoke test with installer and updater coverage.
-- [ ] Run `cargo xtask check`, the workspace build, release script tests, Helm chart tests, and image checks when available.
+- [x] Run the early checks and a server smoke test with installer and updater coverage.
+- [x] Run `cargo xtask check`, the workspace build, release script tests, Helm chart tests, and image checks when available.
+
+The complete gate passes with Rust 1.89, matching the image compiler.
+The default Rust 1.99 gate passes all 50 tests but stops at the existing `async-trait` Clippy failure.
+Existing [fix PR #6](https://github.com/futex-ai/cli-release/pull/6) owns that failure.
+Evidence: `.context/prerelease-channel/logs/` and `.context/prerelease-channel/reports/implementation.md`.
 - [ ] Commit with Conventional Commits and push the current branch.
 - [ ] Review the complete diff against `origin/main` with the `implementation-review` skill after the push.
   Apply the finding rule and re-review fixes once.

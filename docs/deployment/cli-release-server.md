@@ -25,11 +25,58 @@ CLI_RELEASE_GITHUB_API_URL=https://api.github.com
 CLI_RELEASE_SERVER_BIND=0.0.0.0:8080
 CLI_RELEASE_TAG_PREFIX=v
 CLI_RELEASE_ASSET_TEMPLATE={binary}-{version}-{target}.tar.gz
+CLI_RELEASE_CHANNEL=stable
 CLI_RELEASE_CLIENT_SERVER_URL_ENV=CLI_RELEASE_SERVER_URL
 CLI_RELEASE_INSTALL_DIR_ENV=CLI_RELEASE_INSTALL_DIR
 CLI_RELEASE_LOG_LEVEL=info
 CLI_RELEASE_LOG_FORMAT=json
 ```
+
+## Release Channels
+
+`CLI_RELEASE_CHANNEL` selects the release that the latest metadata routes
+serve. Install scripts and updater checks read these routes, so the channel
+applies to both.
+
+- `stable`, the default, serves the release that GitHub reports as latest.
+  GitHub never reports a draft or a prerelease as latest.
+- `prerelease` serves the first release in GitHub's release-list order that
+  is not a draft and has a matching tag. That release can be a prerelease or
+  a full release.
+
+With `prerelease`, the latest routes return `404` when no release matches.
+A value other than `stable` or `prerelease` logs a startup warning, and the
+server uses `stable`.
+Versioned download routes serve the exact version in their path for both
+channels. The
+[release channel rules](../protocol/cli-releases.md#release-channels) give
+the complete contract.
+
+### Preview Deployment
+
+A preview deployment is a second deployment with
+`CLI_RELEASE_CHANNEL=prerelease`. Give it its own public URL and install host:
+
+```bash
+CLI_RELEASE_GITHUB_REPOSITORY=owner/app-repo
+CLI_RELEASE_GITHUB_TOKEN=<token that can read private release assets>
+CLI_RELEASE_PUBLIC_RELEASE_SERVER_URL=https://preview-releases.example.com
+CLI_RELEASE_INSTALL_HOSTS=preview-install.example.com
+CLI_RELEASE_DEFAULT_BINARY=example-cli
+CLI_RELEASE_BINARIES=example-cli,example-admin
+CLI_RELEASE_CHANNEL=prerelease
+```
+
+The preview install host installs the release that the `prerelease` channel
+selects. The install script does not change where the installed CLI checks
+for updates. To keep preview updates, point the app's release-server override
+at the preview URL. The override variable is `CLI_RELEASE_SERVER_URL`, unless
+the app chooses another name.
+
+Updater clients compare semantic versions, so preview tags need semantic
+versions, such as `v1.3.0-rc.1`. A client on `1.3.0-rc.1` updates to `1.3.0`
+when the preview deployment serves that full release. A client does not move
+back to an older version unless the upgrade is forced.
 
 ## Docker
 
@@ -90,8 +137,8 @@ Validate the chart:
 python3 helm/cli-release-server/tests/assert_cli_release_chart.py
 ```
 
-Each app repo should override image, hosts, binaries, repository, and secret
-source values in its own infrastructure configuration.
+Each app repo should override image, hosts, binaries, repository, release
+channel, and secret source values in its own infrastructure configuration.
 The Helm chart keeps the server process bound to `0.0.0.0:8080` so the
 Deployment's named container port, probes, and Service target stay aligned.
 Use `service.port` and ingress values to change the Kubernetes-facing port or
@@ -102,6 +149,36 @@ token source: `secret.values.releaseGithubToken`, `secret.existingSecret`, or
 When `config.releaseGithubRepository` is empty, the chart omits
 `CLI_RELEASE_GITHUB_REPOSITORY` and `CLI_RELEASE_GITHUB_TOKEN` so the deployment
 can serve configured install scripts without a GitHub-backed release provider.
+
+`config.releaseChannel` sets `CLI_RELEASE_CHANNEL`. It defaults to `stable`.
+Set it to `prerelease` for a preview deployment. The chart passes the value
+through without validation. The server warns about an unknown value and uses
+`stable`.
+
+Render a preview deployment next to a stable one. Use another Helm release
+name and other TLS secret names, so that the two deployments share no
+resources:
+
+```yaml
+# preview-values.yaml
+config:
+  releaseGithubRepository: owner/app-repo
+  releaseChannel: prerelease
+  publicReleaseServerUrl: https://preview-releases.example.com
+  installHosts:
+    - preview-install.example.com
+ingress:
+  host: preview-releases.example.com
+  tlsSecretName: cli-release-preview-tls
+  installHost: preview-install.example.com
+  installTlsSecretName: cli-release-preview-install-tls
+```
+
+```bash
+helm template cli-release-server-preview helm/cli-release-server \
+  -f preview-values.yaml \
+  --set secret.values.releaseGithubToken=dummy-token
+```
 
 Terraform is not copied into this workspace as a provider-specific deployment
 example. App repositories should manage DNS records, Secret Manager entries,
