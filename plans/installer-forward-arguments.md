@@ -56,6 +56,13 @@ The Rust 1.99 gate passes all 47 tests, then stops at the known `async-trait` Cl
 The same complete gate passes with Rust 1.89, matching the Dockerfile.
 Existing [fix PR #6](https://github.com/futex-ai/cli-release/pull/6) owns the macro dependency fix.
 Evidence: `.context/installer-forward-arguments/reports/verification.md`.
+
+On 2026-11-08, the user reported that PR #6 merged as `4a57677`.
+The user authorized integration of current `origin/main` before the final checks.
+Merge `647df05` takes main's lockfile without conflicts and retains every installer change.
+Its remerge audit has exactly two parents and no conflict-resolution diff.
+The final default-toolchain gate must pass on this combined tree before the ready pull request.
+Integration evidence: `.context/installer-forward-arguments/logs/main-merge-audit.log`.
 - [ ] Commit with Conventional Commits and push the new branch.
 - [ ] Run a fresh review against `origin/main` with the `implementation-review` skill after the push.
   Apply confirmed findings and re-review any fixes.
