@@ -33,14 +33,20 @@ In `sh -s -- install --token '<token>'`, they are `install`, `--token`, and
 `<token>`. The `--` ends the options of `sh`, so it is not a script argument.
 
 - Without script arguments, the script installs the binary and does not run it.
-- With script arguments, the script runs the installed binary once after the
-  install.
+- With script arguments, the installed binary replaces the script process after
+  the install. The binary runs once, in the process that ran the script.
 - The binary receives exactly the script arguments: the same number, in the
   same order, with the same bytes.
-- The script exits with the exit status of the binary.
-- The script removes its temporary directory for any exit status of the binary.
+- The caller gets the exit status of the binary.
+- The script removes its temporary directory before the binary starts. When the
+  script does not start the binary, it removes the directory as it exits.
+- No installer process waits for the binary or keeps the script arguments while
+  the binary runs. Running the binary as a child process was rejected, because
+  the waiting script kept the arguments, such as a token, in the process list
+  until the binary exited.
 - The script and the server must not log script argument values or put them in
-  error messages, because the values can carry secrets such as tokens. The
-  installed binary owns its own output.
+  error messages, because the values can carry secrets such as tokens.
+- The installed binary owns its own arguments and output. The binary decides
+  whether its arguments stay visible to other processes.
 - The rule applies to every configured binary, with no setting and no
   product-specific default.

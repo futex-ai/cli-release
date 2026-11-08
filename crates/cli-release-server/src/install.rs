@@ -211,7 +211,9 @@ case ":${{PATH:-}}:" in
 esac
 
 if [ "$#" -gt 0 ]; then
-  "$install_dir/$binary" "$@"
+  rm -rf "$tmp_dir"
+  trap - EXIT HUP INT TERM
+  exec "$install_dir/$binary" "$@"
 fi
 "#
     ))

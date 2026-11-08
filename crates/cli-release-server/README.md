@@ -108,20 +108,22 @@ Generated install scripts verify the archive checksum, reject unsafe archive
 member paths, and extract only the selected binary into a temporary file before
 copying it into the install directory.
 
-When a caller passes arguments to an install script, the script runs the
-installed binary with exactly those arguments after the install. With the Quick
-Start values, this command installs `example-cli` and then runs
-`example-cli install --token '<token>'`:
+When a caller passes arguments to an install script, the installed binary
+replaces the script process after the install and gets exactly those
+arguments. With the Quick Start values, this command installs `example-cli`
+and then runs `example-cli install --token '<token>'`:
 
 ```bash
 curl -fsSL https://install.example.com | sh -s -- install --token '<token>'
 ```
 
 The `--` ends the options of `sh`, so the binary does not receive it. The
-script runs the binary once, exits with the binary's exit status, and still
-removes its temporary directory. The script and the server never log the
-argument values or put them in error messages, because the values can hold
-secrets. Without arguments, the script only installs the binary. The
+script removes its temporary directory before the binary starts. No installer
+shell waits with the arguments while the binary runs, and the caller gets the
+binary's exit status. The binary owns its own arguments and output. The script
+and the server never log the argument values or put them in error messages,
+because the values can hold secrets. Without arguments, the script only
+installs the binary. The
 [installer contract](../../docs/protocol/cli-installers.md#script-arguments)
 holds the complete rule.
 
@@ -147,6 +149,28 @@ cargo xtask check
 ```
 
 Keep endpoint behavior aligned with the CLI release protocol docs.
+
+### Test Prerequisites
+
+On Linux, `tests/installer_handoff.rs` runs the generated install script under
+`bash`, `dash`, and BusyBox `sh`. It needs all three shells, GNU tar as `tar`,
+`sha256sum`, and a C compiler from `CC` or `cc`. It fails when one of them is
+missing. On Debian or Ubuntu, install the two extra shells:
+
+```bash
+sudo apt-get install -y dash busybox-static
+```
+
+CI installs the same two packages before `cargo xtask check`. The test builds a
+small C program that stands in for the installed binary. While that program
+runs, the test reads `/proc` to check that no installer process keeps the
+script arguments.
+
+The test adds a `tar` shell function to the generated script. The function
+runs GNU tar with the unchanged flags of the script. BusyBox `sh` from Debian's
+`busybox-static` can run its own `tar` applet before it searches `PATH`, and
+that applet fails to extract a gzip archive with those flags. The function
+keeps that separate problem out of this test.
 
 ### Key Code
 

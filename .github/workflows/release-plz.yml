@@ -36,6 +36,11 @@ jobs:
       - name: Install Helm
         uses: azure/setup-helm@v4
 
+      - name: Install test shells
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dash busybox-static
+
       - name: Run workspace checks
         run: cargo xtask check
 

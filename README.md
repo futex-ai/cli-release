@@ -45,6 +45,9 @@ scripts/test-cli-release.sh
 cargo run -p cli-release-server -- serve --bind 127.0.0.1:8080
 ```
 
+On Linux, the server tests need extra shells. See the
+[server test prerequisites](./crates/cli-release-server/README.md#test-prerequisites).
+
 `cargo xtask check` is the complete gate. Run it before completion:
 
 ```bash
