@@ -11,18 +11,21 @@ ROOT = Path(__file__).resolve().parents[3]
 CHART = ROOT / "helm" / "cli-release-server"
 
 
-def render() -> str:
+def render(release_channel: str | None = None) -> str:
+    command = [
+        "helm",
+        "template",
+        "cli-release-server",
+        str(CHART),
+        "--set",
+        "config.releaseGithubRepository=owner/repo",
+        "--set",
+        "secret.values.releaseGithubToken=dummy-token",
+    ]
+    if release_channel is not None:
+        command.extend(["--set", f"config.releaseChannel={release_channel}"])
     result = subprocess.run(
-        [
-            "helm",
-            "template",
-            "cli-release-server",
-            str(CHART),
-            "--set",
-            "config.releaseGithubRepository=owner/repo",
-            "--set",
-            "secret.values.releaseGithubToken=dummy-token",
-        ],
+        command,
         check=True,
         text=True,
         stdout=subprocess.PIPE,
@@ -115,6 +118,13 @@ def main() -> None:
         assert_contains(output, expected)
     assert_not_contains(output, "JUNO_RELEASE")
     assert_not_contains(output, "juno.futex.ai")
+    for channel in [None, "prerelease", "future-channel"]:
+        channel_output = output if channel is None else render(channel)
+        expected = channel or "stable"
+        assert_contains(
+            channel_output,
+            f'name: CLI_RELEASE_CHANNEL\n              value: "{expected}"',
+        )
     assert_contains(
         render_missing_token_source(),
         "config.releaseGithubRepository requires secret.values.releaseGithubToken",

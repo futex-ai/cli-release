@@ -1,6 +1,6 @@
 //! Environment-backed release-server configuration.
 
-use crate::{Error, Result};
+use crate::{Error, Result, channel, channel::ReleaseChannel};
 
 /// Server bind environment variable.
 pub const BIND_ENV: &str = "CLI_RELEASE_SERVER_BIND";
@@ -64,6 +64,8 @@ pub struct GitHubConfig {
     pub tag_prefix: String,
     /// Archive asset template.
     pub asset_template: String,
+    /// Channel used by latest metadata routes.
+    pub channel: ReleaseChannel,
 }
 
 /// Install-script route configuration.
@@ -209,6 +211,7 @@ fn github_from_env(tag_prefix: &str, asset_template: &str) -> Result<Option<GitH
         env_value(GITHUB_API_URL_ENV).unwrap_or_else(|| DEFAULT_GITHUB_API_URL.to_owned()),
         tag_prefix,
         asset_template,
+        channel::from_env(),
     )
 }
 
@@ -218,6 +221,7 @@ fn github_from_values(
     api_url: String,
     tag_prefix: &str,
     asset_template: &str,
+    channel: ReleaseChannel,
 ) -> Result<Option<GitHubConfig>> {
     match (repository, token) {
         (None, None) => Ok(None),
@@ -227,6 +231,7 @@ fn github_from_values(
             token,
             tag_prefix: tag_prefix.to_owned(),
             asset_template: asset_template.to_owned(),
+            channel,
         })),
         _ => Err(Error::IncompleteGitHubConfig {
             repository_env: GITHUB_REPOSITORY_ENV,

@@ -9,7 +9,8 @@ configurable release server for private GitHub Release assets.
 - Shared JSON release metadata contract for CLI update checks.
 - Trait-backed updater library for status checks and explicit self-upgrades.
 - Generic HTTP release server for install scripts, latest metadata, and
-  proxied archive downloads.
+  proxied archive downloads. Each deployment serves a `stable` or a
+  `prerelease` release channel.
 - Release packaging script, Docker image target, main-branch image publishing,
   Helm chart, and release-plz configuration for this workspace's shared crates.
 
@@ -28,6 +29,13 @@ GET /releases/download/{binary}/{version}/{target}
 App-specific repositories publish their own CLI binaries and deploy this
 release server with `CLI_RELEASE_*` environment variables pointing at the app
 repository's GitHub Releases.
+
+`CLI_RELEASE_CHANNEL` selects the release behind the two latest routes. The
+default, `stable`, serves GitHub's latest full release. `prerelease` also
+serves prereleases. A preview deployment uses it, so that its install scripts
+and updater checks get preview builds. The download route serves the exact
+version in its path for both channels. See
+[Release Channels](./docs/protocol/cli-releases.md#release-channels).
 
 ## Developer Get Started
 

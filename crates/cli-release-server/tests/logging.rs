@@ -51,6 +51,40 @@ fn cli_flag_overrides_json_env_format() {
     assert!(!first_line.starts_with('{'));
 }
 
+#[test]
+fn channel_environment_warns_only_for_unknown_values() {
+    for value in [
+        None,
+        Some(""),
+        Some("stable"),
+        Some("prerelease"),
+        Some("future-channel"),
+    ] {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_cli-release-server"));
+        command
+            .env_clear()
+            .args(["serve", "--bind", "not-an-addr"])
+            .env("CLI_RELEASE_LOG_FORMAT", "json");
+        if let Some(value) = value {
+            command.env("CLI_RELEASE_CHANNEL", value);
+        }
+        let output = command.output().expect("server should run");
+        let stderr = String::from_utf8(output.stderr).expect("utf-8 stderr");
+        assert!(!output.status.success());
+        assert!(stderr.contains("ParseBind"), "{stderr}");
+        assert_eq!(
+            stderr.contains("unknown release channel"),
+            value == Some("future-channel"),
+            "{value:?}: {stderr}"
+        );
+        assert_eq!(
+            stderr.contains("\"channel\":\"future-channel\""),
+            value == Some("future-channel"),
+            "{stderr}"
+        );
+    }
+}
+
 fn read_stderr_lines(stderr: ChildStderr) -> (mpsc::Receiver<String>, thread::JoinHandle<()>) {
     let (stderr_tx, stderr_rx) = mpsc::channel();
     let stderr_reader = thread::spawn(move || {
