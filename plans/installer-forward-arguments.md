@@ -27,26 +27,35 @@ Use the existing shell error handling to preserve a failing binary's status.
 
 Depends on: none
 
-- [ ] Add the forwarding, no-argument, exit-status, cleanup, and argument-privacy requirements to the installer contract.
-- [ ] Update the server README with the rule and a generic usage example.
+- [x] Add the forwarding, no-argument, exit-status, cleanup, and argument-privacy requirements to the installer contract.
+- [x] Update the server README with the rule and a generic usage example.
+
+Evidence: `.context/installer-forward-arguments/reports/docs.md`.
 
 ## Milestone 2: Forward arguments and prove the behavior
 
 Depends on: 1
 
-- [ ] Add focused regression tests in `src/_tests_/install_tests.rs` without losing any existing assertion.
-- [ ] Prove the new tests fail with the old script.
-- [ ] Add the generic post-install call in `src/install.rs`.
-- [ ] Run a real generated-script shell smoke with a stub binary.
+- [x] Add focused regression tests in `src/_tests_/install_tests.rs` without losing any existing assertion.
+- [x] Prove the new tests fail with the old script.
+- [x] Add the generic post-install call in `src/install.rs`.
+- [x] Run a real generated-script shell smoke with a stub binary.
   Cover spaces, quotes, `--`, no arguments, a nonzero status, one invocation, privacy, and cleanup.
-- [ ] Record test costs and focused checks under `.context/installer-forward-arguments/`.
+- [x] Record test costs and focused checks under `.context/installer-forward-arguments/`.
+
+Evidence: `.context/installer-forward-arguments/reports/implementation.md` and `logs/smoke-green.log`.
 
 ## Milestone 3: Checks, review, and ready pull request
 
 Depends on: 1, 2
 
-- [ ] Run the complete `AGENTS.md` gate and report the known Clippy failure without fixing it.
-- [ ] Run the build and relevant release-script, Helm, and image checks.
+- [x] Run the complete `AGENTS.md` gate and report the known Clippy failure without fixing it.
+- [x] Run the build and relevant release-script, Helm, and image checks.
+
+The Rust 1.99 gate passes all 47 tests, then stops at the known `async-trait` Clippy failure.
+The same complete gate passes with Rust 1.89, matching the Dockerfile.
+Existing [fix PR #6](https://github.com/futex-ai/cli-release/pull/6) owns the macro dependency fix.
+Evidence: `.context/installer-forward-arguments/reports/verification.md`.
 - [ ] Commit with Conventional Commits and push the new branch.
 - [ ] Run a fresh review against `origin/main` with the `implementation-review` skill after the push.
   Apply confirmed findings and re-review any fixes.

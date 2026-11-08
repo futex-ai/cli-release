@@ -94,6 +94,23 @@ Generated install scripts verify the archive checksum, reject unsafe archive
 member paths, and extract only the selected binary into a temporary file before
 copying it into the install directory.
 
+When a caller passes arguments to an install script, the script runs the
+installed binary with exactly those arguments after the install. With the Quick
+Start values, this command installs `example-cli` and then runs
+`example-cli install --token '<token>'`:
+
+```bash
+curl -fsSL https://install.example.com | sh -s -- install --token '<token>'
+```
+
+The `--` ends the options of `sh`, so the binary does not receive it. The
+script runs the binary once, exits with the binary's exit status, and still
+removes its temporary directory. The script and the server never log the
+argument values or put them in error messages, because the values can hold
+secrets. Without arguments, the script only installs the binary. The
+[installer contract](../../docs/protocol/cli-releases.md#script-arguments)
+holds the complete rule.
+
 Release metadata and download routes are scoped to `CLI_RELEASE_BINARIES`.
 The index route skips unconfigured GitHub assets before checksum resolution, so
 metadata problems on assets outside the deployment allowlist do not break

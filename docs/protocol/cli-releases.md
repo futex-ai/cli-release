@@ -151,6 +151,25 @@ Install scripts:
 Install scripts must not embed product-specific domains or binary names except
 for values supplied by server configuration.
 
+### Script Arguments
+
+Script arguments are the arguments that the shell passes to the install script.
+In `sh -s -- install --token '<token>'`, they are `install`, `--token`, and
+`<token>`. The `--` ends the options of `sh`, so it is not a script argument.
+
+- Without script arguments, the script installs the binary and does not run it.
+- With script arguments, the script runs the installed binary once after the
+  install.
+- The binary receives exactly the script arguments: the same number, in the
+  same order, with the same bytes.
+- The script exits with the exit status of the binary.
+- The script removes its temporary directory for any exit status of the binary.
+- The script and the server must not log script argument values or put them in
+  error messages, because the values can carry secrets such as tokens. The
+  installed binary owns its own output.
+- The rule applies to every configured binary, with no setting and no
+  product-specific default.
+
 ## Updater Contract
 
 `cli-updater` provides trait-backed release checks and installation:

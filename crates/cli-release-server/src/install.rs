@@ -209,6 +209,10 @@ case ":${{PATH:-}}:" in
     echo "warning: $install_dir is not on PATH" >&2
     ;;
 esac
+
+if [ "$#" -gt 0 ]; then
+  "$install_dir/$binary" "$@"
+fi
 "#
     ))
 }
