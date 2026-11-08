@@ -1,10 +1,17 @@
-use std::{env, fs, io::Write, os::unix::fs::PermissionsExt, path::Path, process::Command};
+//! Shell installer rendering and execution tests.
 
-use flate2::{Compression, write::GzEncoder};
+use std::{env, fs, process::Command};
 
 use crate::config::InstallConfig;
 
+use self::support::{
+    InstallerFixture, archive_with_traversal_member, make_executable, sha256, write_curl_shim,
+    write_failing_curl_shim, write_uname_shim,
+};
 use super::*;
+
+#[path = "install_support.rs"]
+mod support;
 
 fn test_config() -> InstallConfig {
     InstallConfig::new(
@@ -141,141 +148,97 @@ fn rejects_unsupported_binaries() {
     assert!(script_for(&config, "example-server").is_err());
 }
 
-fn archive_with_traversal_member(path: &Path, binary: &str) {
-    let file = fs::File::create(path).expect("archive should create");
-    let mut encoder = GzEncoder::new(file, Compression::default());
-    append_archive_file(&mut encoder, "../outside-marker", b"owned");
-    append_archive_file(&mut encoder, &format!("package/{binary}"), b"safe");
-    encoder
-        .write_all(&[0; 1024])
-        .expect("tar trailer should write");
-    encoder.finish().expect("gzip archive should finish");
-}
-
-fn append_archive_file(archive: &mut GzEncoder<fs::File>, path: &str, bytes: &[u8]) {
-    let mut header = [0_u8; 512];
-    write_tar_bytes(&mut header[0..100], path.as_bytes());
-    write_tar_octal(&mut header[100..108], 0o755);
-    write_tar_octal(&mut header[108..116], 0);
-    write_tar_octal(&mut header[116..124], 0);
-    write_tar_octal(&mut header[124..136], bytes.len() as u64);
-    write_tar_octal(&mut header[136..148], 0);
-    header[148..156].fill(b' ');
-    header[156] = b'0';
-    write_tar_bytes(&mut header[257..263], b"ustar\0");
-    write_tar_bytes(&mut header[263..265], b"00");
-    let checksum = header.iter().map(|byte| u64::from(*byte)).sum();
-    write_tar_checksum(&mut header[148..156], checksum);
-
-    archive.write_all(&header).expect("tar header should write");
-    archive.write_all(bytes).expect("tar body should write");
-    let padding = (512 - (bytes.len() % 512)) % 512;
-    if padding > 0 {
-        archive
-            .write_all(&vec![0; padding])
-            .expect("tar padding should write");
-    }
-}
-
-fn write_tar_bytes(field: &mut [u8], value: &[u8]) {
-    let len = value.len().min(field.len());
-    field[..len].copy_from_slice(&value[..len]);
-}
-
-fn write_tar_octal(field: &mut [u8], value: u64) {
-    let octal = format!("{value:0width$o}\0", width = field.len() - 1);
-    write_tar_bytes(field, octal.as_bytes());
-}
-
-fn write_tar_checksum(field: &mut [u8], value: u64) {
-    let octal = format!("{value:06o}\0 ");
-    write_tar_bytes(field, octal.as_bytes());
-}
-
-fn sha256(path: &Path) -> String {
-    let output = Command::new("sh")
-        .arg("-c")
-        .arg(
-            "if command -v sha256sum >/dev/null 2>&1; then sha256sum \"$1\"; else shasum -a 256 \"$1\"; fi",
+#[test]
+fn generated_installer_forwards_arguments_once_without_logging_values() {
+    let fixture = InstallerFixture::new("example-admin", 0);
+    let install_only = fixture.run(&[]);
+    assert_eq!(install_only.status.code(), Some(0));
+    assert_eq!(
+        String::from_utf8(install_only.stdout.clone()).expect("stdout should be utf-8"),
+        format!(
+            "installed example-admin 1.2.3 to {}/example-admin\n",
+            fixture.install_dir.display()
         )
-        .arg("sha256")
-        .arg(path)
-        .output()
-        .expect("sha256 command should run");
-    assert!(output.status.success());
-    String::from_utf8(output.stdout)
-        .expect("sha256 output should be utf-8")
-        .split_whitespace()
-        .next()
-        .expect("sha256 output should include digest")
-        .to_owned()
-}
-
-fn write_curl_shim(path: &Path, archive: &Path, sha256: &str) {
-    let metadata = format!(
-        r#"{{"version":"1.2.3","asset_name":"example-cli.tar.gz","download_url":"/archive.tar.gz","sha256":"{sha256}"}}"#
     );
-    write_executable(
-        path,
-        &format!(
-            r#"#!/bin/sh
-set -eu
-out=""
-while [ "$#" -gt 0 ]; do
-  if [ "$1" = "-o" ]; then
-    shift
-    out="$1"
-  fi
-  shift || true
-done
-if [ -n "$out" ]; then
-  cp {} "$out"
-else
-  printf '%s\n' {}
-fi
-"#,
-            shell_quote(&archive.display().to_string()),
-            shell_quote(&metadata)
-        ),
+    assert_eq!(
+        String::from_utf8(install_only.stderr.clone()).expect("stderr should be utf-8"),
+        format!(
+            "warning: {} is not on PATH\n",
+            fixture.install_dir.display()
+        )
     );
-}
+    assert!(fixture.install_dir.join("example-admin").is_file());
+    assert!(!fixture.calls.exists(), "no arguments must only install");
+    assert_eq!(
+        fs::read_dir(&fixture.tmp_root)
+            .expect("runtime should read")
+            .count(),
+        0
+    );
 
-fn write_uname_shim(path: &Path) {
-    write_executable(
-        path,
-        r#"#!/bin/sh
-set -eu
-case "$1" in
-  -s) printf '%s\n' Darwin ;;
-  -m) printf '%s\n' x86_64 ;;
-esac
-"#,
+    let output = fixture.run(&[
+        "install",
+        "--token",
+        "private token 'single' \"double\"",
+        "--",
+        "",
+        "$(touch marker); * ? [x] | & > < `touch marker` \\ $HOME",
+    ]);
+    assert_eq!(output.status.code(), Some(0));
+    assert!(
+        fixture.calls.exists(),
+        "installed binary must run with arguments"
+    );
+    assert_eq!(
+        fs::read(&fixture.calls).expect("calls should read"),
+        b"run\n"
+    );
+    assert_eq!(
+        fs::read(&fixture.arguments).expect("arguments should read"),
+        b"install\0--token\0private token 'single' \"double\"\0--\0\0$(touch marker); * ? [x] | & > < `touch marker` \\ $HOME\0"
+    );
+    assert_eq!(output.stdout, install_only.stdout);
+    assert_eq!(output.stderr, install_only.stderr);
+    assert_eq!(
+        fs::read_dir(&fixture.tmp_root)
+            .expect("runtime should read")
+            .count(),
+        0
     );
 }
 
-fn write_failing_curl_shim(path: &Path) {
-    write_executable(
-        path,
-        r#"#!/bin/sh
-set -eu
-exit 22
-"#,
+#[test]
+fn generated_installer_preserves_binary_failure_status_and_cleans_up() {
+    let fixture = InstallerFixture::new("example-cli", 37);
+    let output = fixture.run(&["private failure token"]);
+
+    assert_eq!(
+        output.status.code(),
+        Some(37),
+        "installer must return the binary exit status"
     );
-}
-
-fn write_executable(path: &Path, content: &str) {
-    fs::write(path, content).expect("executable should write");
-    make_executable(path);
-}
-
-fn make_executable(path: &Path) {
-    let mut permissions = fs::metadata(path)
-        .expect("executable metadata should read")
-        .permissions();
-    permissions.set_mode(0o755);
-    fs::set_permissions(path, permissions).expect("executable mode should set");
-}
-
-fn shell_quote(value: &str) -> String {
-    format!("'{}'", value.replace('\'', r#"'\''"#))
+    assert_eq!(
+        fs::read(&fixture.calls).expect("calls should read"),
+        b"run\n"
+    );
+    assert_eq!(
+        String::from_utf8(output.stdout).expect("stdout should be utf-8"),
+        format!(
+            "installed example-cli 1.2.3 to {}/example-cli\n",
+            fixture.install_dir.display()
+        )
+    );
+    assert_eq!(
+        String::from_utf8(output.stderr).expect("stderr should be utf-8"),
+        format!(
+            "warning: {} is not on PATH\n",
+            fixture.install_dir.display()
+        )
+    );
+    assert_eq!(
+        fs::read_dir(&fixture.tmp_root)
+            .expect("runtime should read")
+            .count(),
+        0
+    );
 }

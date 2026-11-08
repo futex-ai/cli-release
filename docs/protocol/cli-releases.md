@@ -168,26 +168,9 @@ the server up and `stable` keeps prereleases opt-in.
 
 ## Installer Contract
 
-Install scripts:
-
-- Support Linux and macOS on `x86_64` and `aarch64`.
-- Resolve the release server from the configured client override env var, then
-  from `CLI_RELEASE_PUBLIC_RELEASE_SERVER_URL`.
-- Fetch `/releases/latest/{binary}/{target}`.
-- Download the archive from `download_url`.
-- Require a SHA-256 checksum in metadata before installing.
-- Reject archive members with absolute paths, parent-directory traversal, or
-  option-like leading dashes before extraction.
-- Extract only the selected binary member to a fixed temporary path instead of
-  unpacking the full archive.
-- Install into `CLI_RELEASE_INSTALL_DIR` when set, `/usr/local/bin` when
-  writable, or `$HOME/.local/bin` otherwise.
-
-An install script installs the release that the channel of its server
-selects. It has no channel option of its own.
-
-Install scripts must not embed product-specific domains or binary names except
-for values supplied by server configuration.
+The server renders install scripts for configured binaries.
+[CLI Installers](./cli-installers.md) defines the installer contract, including
+script arguments.
 
 ## Updater Contract
 

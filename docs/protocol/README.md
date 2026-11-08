@@ -6,3 +6,4 @@ and deployment configuration must stay aligned with.
 ## Documents
 
 - [CLI Releases](./cli-releases.md)
+- [CLI Installers](./cli-installers.md)
