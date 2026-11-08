@@ -63,6 +63,15 @@ Merge `647df05` takes main's lockfile without conflicts and retains every instal
 Its remerge audit has exactly two parents and no conflict-resolution diff.
 The final default-toolchain gate must pass on this combined tree before the ready pull request.
 Integration evidence: `.context/installer-forward-arguments/logs/main-merge-audit.log`.
+
+During review, PR #7 merged into main as `bc59b05`.
+Merge `3ee412c` integrates that current-main change without conflicts or a remerge diff.
+The feature diff against main still contains only installer work.
+The combined protocol now exceeds its length target, so the installer contract moves to a linked protocol page without losing requirements.
+
+- [x] Split the installer protocol section and check every moved requirement and live link.
+
+Evidence: `.context/installer-forward-arguments/reports/docs-main-integration.md`.
 - [ ] Commit with Conventional Commits and push the new branch.
 - [ ] Run a fresh review against `origin/main` with the `implementation-review` skill after the push.
   Apply confirmed findings and re-review any fixes.

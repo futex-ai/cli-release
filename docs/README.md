@@ -8,3 +8,4 @@
 ## Protocol
 
 - [CLI Releases](./protocol/cli-releases.md)
+- [CLI Installers](./protocol/cli-installers.md)

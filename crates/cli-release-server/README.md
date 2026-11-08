@@ -122,7 +122,7 @@ script runs the binary once, exits with the binary's exit status, and still
 removes its temporary directory. The script and the server never log the
 argument values or put them in error messages, because the values can hold
 secrets. Without arguments, the script only installs the binary. The
-[installer contract](../../docs/protocol/cli-releases.md#script-arguments)
+[installer contract](../../docs/protocol/cli-installers.md#script-arguments)
 holds the complete rule.
 
 Release metadata and download routes are scoped to `CLI_RELEASE_BINARIES`.
@@ -165,3 +165,4 @@ Keep endpoint behavior aligned with the CLI release protocol docs.
 - [`../cli-release-interface/README.md`](../cli-release-interface/README.md)
 - [`../cli-updater/README.md`](../cli-updater/README.md)
 - [`../../docs/protocol/cli-releases.md`](../../docs/protocol/cli-releases.md)
+- [`../../docs/protocol/cli-installers.md`](../../docs/protocol/cli-installers.md)
