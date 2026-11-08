@@ -5,7 +5,8 @@ proxied archive downloads for CLI binaries published as GitHub Release assets.
 
 ## Responsibilities
 
-- Serve latest-release metadata for configured CLI binaries.
+- Serve latest-release metadata for configured CLI binaries from the
+  configured release channel.
 - Proxy archive downloads from private GitHub Releases.
 - Render install scripts without exposing GitHub credentials to clients.
 - Keep product-specific repositories, domains, binaries, tag prefixes, and
@@ -63,8 +64,18 @@ Common optional values:
 - `CLI_RELEASE_TAG_PREFIX`, defaults to `v`.
 - `CLI_RELEASE_ASSET_TEMPLATE`, defaults to
   `{binary}-{version}-{target}.tar.gz`.
+- `CLI_RELEASE_CHANNEL`, `stable` or `prerelease`, defaults to `stable`.
 - `CLI_RELEASE_CLIENT_SERVER_URL_ENV`, defaults to `CLI_RELEASE_SERVER_URL`.
 - `CLI_RELEASE_INSTALL_DIR_ENV`, defaults to `CLI_RELEASE_INSTALL_DIR`.
+
+`CLI_RELEASE_CHANNEL` selects the release behind the latest metadata routes.
+`stable` serves the release that GitHub reports as latest, which is never a
+draft or a prerelease. `prerelease` serves the first release in GitHub's
+release-list order that is not a draft and has a matching tag. That release
+can be a prerelease or a full release. A value other than `stable` or
+`prerelease` logs a startup warning, and the server uses `stable`. The
+[release channel rules](../../docs/protocol/cli-releases.md#release-channels)
+give the complete contract.
 
 When `CLI_RELEASE_INSTALL_HOSTS` is set, `CLI_RELEASE_DEFAULT_BINARY` is
 required and must be included in `CLI_RELEASE_BINARIES`. Configured binary
@@ -83,8 +94,11 @@ GET /releases/latest/{binary}/{target}
 GET /releases/download/{binary}/{version}/{target}
 ```
 
-When GitHub release access is configured, the server reads the latest release,
-derives per-binary metadata, and proxies matching archives. Metadata includes a
+When GitHub release access is configured, the server reads the release that
+`CLI_RELEASE_CHANNEL` selects, derives per-binary metadata, and proxies
+matching archives. With `prerelease`, the latest routes return `404` when no
+release matches. A failed GitHub request returns `502`. With `stable`, this
+includes a repository without a full release. Metadata includes a
 SHA-256 digest when the release has a matching `.sha256` sidecar or GitHub
 asset digest.
 GitHub API and asset requests use explicit request and connect timeouts so
@@ -117,6 +131,7 @@ metadata problems on assets outside the deployment allowlist do not break
 configured binaries.
 Versioned download URLs fetch the GitHub release tag for that version, so a
 newer latest release does not invalidate metadata that was already returned.
+The release channel does not apply to versioned downloads.
 
 Container images set `CLI_RELEASE_BUILD_COMMIT` in the runtime stage so
 `GET /` reports the deployed revision.
@@ -137,11 +152,12 @@ Keep endpoint behavior aligned with the CLI release protocol docs.
 
 - `src/main.rs` - CLI entrypoint and bind-address parsing.
 - `src/config.rs` - `CLI_RELEASE_*` configuration parsing and validation.
+- `src/channel.rs` - release channel values and the stable fallback.
 - `src/lib.rs` - public release-provider traits and shared error types.
 - `src/routes/` - Axum route wiring for root, install-script, and release
   endpoints.
-- `src/github/` - GitHub Releases client, asset template matching, and release
-  metadata assembly.
+- `src/github/` - GitHub Releases client, release channel selection, asset
+  template matching, and release metadata assembly.
 - `src/install.rs` - configured install script rendering.
 
 ### Related Docs

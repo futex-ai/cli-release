@@ -16,6 +16,7 @@ config:
     - example-cli
   tagPrefix: v
   assetTemplate: "{binary}-{version}-{target}.tar.gz"
+  releaseChannel: stable
   clientServerUrlEnv: CLI_RELEASE_SERVER_URL
   installDirEnv: CLI_RELEASE_INSTALL_DIR
 

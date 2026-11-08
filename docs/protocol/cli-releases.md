@@ -12,6 +12,8 @@ product-specific defaults.
   more CLI binaries from that repository.
 - Configure repository, hostnames, public release URL, binary allowlist, tag
   convention, and asset naming through environment-backed configuration.
+- Let each deployment choose a release channel: full releases only, or
+  prereleases too.
 - Keep GitHub credentials in the server deployment only. CLI users and updater
   clients must not need GitHub credentials.
 - Keep deployment-specific choices in infrastructure values or environment
@@ -87,6 +89,8 @@ Primary environment variables:
 - `CLI_RELEASE_TAG_PREFIX`: release tag prefix. Defaults to `v`.
 - `CLI_RELEASE_ASSET_TEMPLATE`: archive naming template. Defaults to
   `{binary}-{version}-{target}.tar.gz`.
+- `CLI_RELEASE_CHANNEL`: release channel for the latest metadata routes,
+  `stable` or `prerelease`. Defaults to `stable`.
 - `CLI_RELEASE_CLIENT_SERVER_URL_ENV`: environment variable name emitted in
   install scripts for client-side release-server overrides. Defaults to
   `CLI_RELEASE_SERVER_URL`.
@@ -106,9 +110,9 @@ components: non-empty ASCII alphanumeric strings plus `.`, `_`, and `-`.
 
 ## GitHub Release Contract
 
-The GitHub provider reads the latest release from the configured repository.
-The release tag must start with `CLI_RELEASE_TAG_PREFIX`; the remaining suffix
-is the release version.
+The GitHub provider reads releases from the configured repository. A release
+tag must be `CLI_RELEASE_TAG_PREFIX` followed by a non-empty release version.
+This is the tag rule.
 
 Archive assets are matched with `CLI_RELEASE_ASSET_TEMPLATE`. The default
 template supports names such as:
@@ -126,10 +130,41 @@ unconfigured binaries must not fail the index route.
 
 Versioned download routes must fetch the GitHub release identified by
 `CLI_RELEASE_TAG_PREFIX` plus the requested version, not the repository's
-current latest release.
+current latest release. The release channel does not apply to these routes.
+Both channels serve each published version, prereleases included. A channel
+filter for downloads was rejected, because an exact tag names one release and
+clients get the channel's choice from the latest routes.
 GitHub API and asset HTTP requests must use explicit request and connect
 timeouts so stalled upstream calls cannot hang server route handlers
 indefinitely.
+
+## Release Channels
+
+`CLI_RELEASE_CHANNEL` selects one release for `GET /releases/latest` and
+`GET /releases/latest/{binary}/{target}`. Both routes read only that release,
+also when it has no asset for a binary or target.
+
+- `stable` selects the release that GitHub reports as the latest release of
+  the repository. GitHub never reports a draft or a prerelease as latest.
+- `prerelease` reads the GitHub release list in the order that GitHub
+  returns it. It selects the first release that is not a draft and matches
+  the tag rule. Prereleases and full releases both qualify.
+
+`prerelease` reads later pages of the list until it finds a match or reaches
+the end. A draft never matches, also when the GitHub token can list drafts.
+When no release matches, both latest routes return `404`. A semantic-version
+sort was rejected, because the tag rule does not require semantic versions.
+Full releases qualify, because preview clients must also get a newer full
+release.
+
+With `stable`, a latest release that breaks the tag rule fails the latest
+routes. In both channels, a failed GitHub request returns `502`. For `stable`,
+this includes GitHub's `404` for a repository without a full release.
+
+An unset or empty value selects `stable`. A value other than `stable` or
+`prerelease` logs a startup warning that names the value. The server then
+uses `stable`. A startup failure was rejected, because graceful handling keeps
+the server up and `stable` keeps prereleases opt-in.
 
 ## Installer Contract
 
@@ -147,6 +182,9 @@ Install scripts:
   unpacking the full archive.
 - Install into `CLI_RELEASE_INSTALL_DIR` when set, `/usr/local/bin` when
   writable, or `$HOME/.local/bin` otherwise.
+
+An install script installs the release that the channel of its server
+selects. It has no channel option of its own.
 
 Install scripts must not embed product-specific domains or binary names except
 for values supplied by server configuration.
@@ -172,15 +210,22 @@ In `sh -s -- install --token '<token>'`, they are `install`, `--token`, and
 
 ## Updater Contract
 
-`cli-updater` provides trait-backed release checks and installation:
+`cli-updater` checks for updates and installs them:
 
-- `ReleaseClient` fetches metadata and archive bytes.
-- `BinaryInstaller` verifies optional checksums and replaces the current
-  executable.
-- `Updater::status` compares semantic versions.
-- `Updater::upgrade` installs only when a newer version exists unless forced.
-- The production HTTP client uses explicit request and connect timeouts, with a
-  constructor for callers that need custom timeout values.
+- It fetches release metadata and archive bytes from the release server.
+- It verifies the archive checksum when the metadata has one. It then
+  replaces the current executable.
+- It compares the installed and latest versions as semantic versions.
+- An upgrade installs only a newer version, unless the caller forces it.
+- Its HTTP client uses explicit request and connect timeouts. Callers can set
+  custom timeout values.
+
+The updater gets the channel's release from the latest metadata route. It
+has no channel option of its own. In semantic-version order, a prerelease
+such as `1.3.0-rc.1` is older than `1.3.0`. A client on a newer prerelease
+keeps it after its server moves back to `stable`, unless the caller forces an
+upgrade. The server accepts a version that is not a semantic version, but the
+update check fails for it.
 
 The shared updater must not hardcode a product release-server URL. Consuming CLI
 crates pass their preferred default URL and override env var name at their

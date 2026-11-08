@@ -118,6 +118,7 @@ fn github_config_rejects_partial_configuration() {
         DEFAULT_GITHUB_API_URL.to_owned(),
         DEFAULT_TAG_PREFIX,
         DEFAULT_ASSET_TEMPLATE,
+        ReleaseChannel::Stable,
     )
     .expect_err("partial GitHub config should fail");
 
@@ -129,6 +130,7 @@ fn github_config_rejects_partial_configuration() {
         DEFAULT_GITHUB_API_URL.to_owned(),
         DEFAULT_TAG_PREFIX,
         DEFAULT_ASSET_TEMPLATE,
+        ReleaseChannel::Stable,
     )
     .expect_err("partial GitHub config should fail");
 
@@ -142,5 +144,6 @@ fn github_config() -> GitHubConfig {
         token: "token".to_owned(),
         tag_prefix: DEFAULT_TAG_PREFIX.to_owned(),
         asset_template: DEFAULT_ASSET_TEMPLATE.to_owned(),
+        channel: ReleaseChannel::Stable,
     }
 }

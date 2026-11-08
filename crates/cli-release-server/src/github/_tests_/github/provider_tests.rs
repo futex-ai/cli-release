@@ -18,6 +18,7 @@ async fn download_fetches_requested_release_version() {
         token: "token".to_owned(),
         tag_prefix: "v".to_owned(),
         asset_template: "{binary}-{version}-{target}.tar.gz".to_owned(),
+        channel: ReleaseChannel::Stable,
     })
     .expect("provider should build");
 
@@ -44,6 +45,7 @@ async fn index_skips_unconfigured_assets_before_checksum_resolution() {
         token: "token".to_owned(),
         tag_prefix: "v".to_owned(),
         asset_template: "{binary}-{version}-{target}.tar.gz".to_owned(),
+        channel: ReleaseChannel::Stable,
     })
     .expect("provider should build");
 
@@ -76,6 +78,7 @@ async fn custom_timeout_bounds_stalled_github_request() {
             token: "token".to_owned(),
             tag_prefix: "v".to_owned(),
             asset_template: "{binary}-{version}-{target}.tar.gz".to_owned(),
+            channel: ReleaseChannel::Stable,
         },
         Duration::from_millis(50),
         Duration::from_millis(50),

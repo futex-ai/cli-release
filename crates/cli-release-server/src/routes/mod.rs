@@ -94,9 +94,9 @@ impl IntoResponse for HttpError {
             Error::InvalidPathComponent { .. } | Error::InvalidReleaseTag { .. } => {
                 StatusCode::BAD_REQUEST
             }
-            Error::UnsupportedInstallBinary { .. } | Error::MissingAsset { .. } => {
-                StatusCode::NOT_FOUND
-            }
+            Error::UnsupportedInstallBinary { .. }
+            | Error::MissingAsset { .. }
+            | Error::NoMatchingRelease => StatusCode::NOT_FOUND,
             Error::MissingDefaultInstallBinary
             | Error::MissingPublicReleaseServerUrl
             | Error::DefaultBinaryNotConfigured { .. }

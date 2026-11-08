@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use cli_release_interface::{ReleaseAssetInfo, ReleaseIndex};
 use thiserror::Error;
 
+pub mod channel;
 pub mod config;
 pub mod github;
 pub mod install;
@@ -97,6 +98,9 @@ pub enum Error {
     /// GitHub release tag did not match the workspace release convention.
     #[error("[cli_release_server/github] invalid GitHub release tag `{tag}`")]
     InvalidReleaseTag { tag: String },
+    /// The configured release channel has no matching published release.
+    #[error("[cli_release_server/github] no matching release")]
+    NoMatchingRelease,
     /// A checksum companion asset did not contain a valid SHA-256 digest.
     #[error("[cli_release_server/github] invalid checksum asset `{asset_name}`")]
     InvalidChecksumAsset { asset_name: String },

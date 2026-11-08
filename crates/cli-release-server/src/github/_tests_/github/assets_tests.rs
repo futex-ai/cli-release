@@ -43,6 +43,7 @@ fn provider_uses_configured_tag_prefix() {
         token: "token".to_owned(),
         tag_prefix: "release-".to_owned(),
         asset_template: "{binary}-{version}-{target}.tar.gz".to_owned(),
+        channel: ReleaseChannel::Stable,
     })
     .expect("provider should build");
 
